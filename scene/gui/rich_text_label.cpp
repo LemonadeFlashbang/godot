@@ -48,6 +48,11 @@
 #include "modules/regex/regex.h"
 #endif
 
+// Define this to change the setting that affects CJK line breaking behavior.
+#ifndef GNOMESORT_CJK_LINEBREAK_SETTING
+	#define GNOMESORT_CJK_LINEBREAK_SETTING "rich_text/force_cjk_linebreaks"
+#endif
+
 RichTextLabel::Item *RichTextLabel::_get_next_item(Item *p_item, bool p_free) {
 	if (p_free) {
 		if (p_item->subitems.size()) {
@@ -207,6 +212,12 @@ float RichTextLabel::_get_text_length(Item *p_item, const Ref<Font> &p_base_font
 		default: {}
 	}
 	return length;
+}
+
+void RichTextLabel::_settings_changed() {
+	_invalidate_current_line(main);
+	_validate_line_caches(main);
+	update();
 }
 
 int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &y, int p_width, int p_line, ProcessMode p_mode, const Ref<Font> &p_base_font, const Color &p_base_color, const Color &p_font_color_shadow, bool p_shadow_as_outline, const Point2 &shadow_ofs, const Point2i &p_click_pos, Item **r_click_item, int *r_click_char, bool *r_outside, int p_char_count) {
@@ -425,14 +436,27 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 					font = p_base_font;
 				}
 
-				bool no_cjk = true;
 				const CharType *c = text->text.c_str();
 				const CharType *cf = c;
-				for (int i = 0; i < text->text.length(); ++i)
+				bool no_cjk = true;
 				{
-					if (gnomesort::is_cjk_char(c[i]))
+					const ProjectSettings& settings = *ProjectSettings::get_singleton();
+					// Check whether or not CJK rules should be forced for all text.
+					if (settings.has_setting(GNOMESORT_CJK_LINEBREAK_SETTING) &&
+							settings.get_setting(GNOMESORT_CJK_LINEBREAK_SETTING))
 					{
 						no_cjk = false;
+					}
+					// Attempt to detect if the text follows CJK rules otherwise.
+					else
+					{
+						for (int i = 0; i < text->text.length(); ++i)
+						{
+							if (gnomesort::is_cjk_char(c[i]))
+							{
+								no_cjk = false;
+							}
+						}
 					}
 				}
 				int ascent = font->get_ascent();
@@ -2980,6 +3004,7 @@ int RichTextLabel::get_content_height() const {
 
 void RichTextLabel::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_gui_input"), &RichTextLabel::_gui_input);
+	ClassDB::bind_method(D_METHOD("_settings_changed"), &RichTextLabel::_settings_changed);
 	ClassDB::bind_method(D_METHOD("_scroll_changed"), &RichTextLabel::_scroll_changed);
 	ClassDB::bind_method(D_METHOD("get_text"), &RichTextLabel::get_text);
 	ClassDB::bind_method(D_METHOD("add_text", "text"), &RichTextLabel::add_text);
@@ -3293,6 +3318,11 @@ RichTextLabel::RichTextLabel() {
 	fit_content_height = false;
 
 	set_clip_contents(true);
+	// Attach signal listener for changes to project settings.
+	{
+		ProjectSettings& settings = *ProjectSettings::get_singleton();
+		settings.connect("project_settings_changed", this, "_settings_changed");
+	}
 }
 
 RichTextLabel::~RichTextLabel() {
