@@ -398,6 +398,7 @@ private:
 	void _update_scroll();
 	void _update_fx(ItemFrame *p_frame, float p_delta_time);
 	void _scroll_changed(double);
+	void _settings_changed();
 
 	void _gui_input(Ref<InputEvent> p_event);
 	Item *_get_next_item(Item *p_item, bool p_free = false);
