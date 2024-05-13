@@ -47,6 +47,7 @@
 #include "scene/theme/theme_owner.h"
 #include "servers/rendering_server.h"
 #include "servers/text_server.h"
+#include "scene/gui/scroll_container.h"
 
 #ifdef TOOLS_ENABLED
 #include "editor/plugins/control_editor_plugin.h"
@@ -2287,20 +2288,16 @@ Control *Control::_get_focus_neighbor(Side p_side, int p_count) {
 	while (base) {
 		Control *c = Object::cast_to<Control>(base);
 		if (c) {
-			if (c->data.RI) {
-				break;
-			}
+			if (c->data.RI || Object::cast_to<ScrollContainer>(c->get_parent())) {
+				_window_find_focus_neighbor(vdir, base, points, maxd, dist, &result);
+				if (result || c->data.RI) {
+					return result;
+				}
 		}
 		base = base->get_parent();
 	}
 
-	if (!base) {
-		return nullptr;
-	}
-
-	_window_find_focus_neighbor(vdir, base, points, maxd, dist, &result);
-
-	return result;
+	return nullptr;
 }
 
 void Control::_window_find_focus_neighbor(const Vector2 &p_dir, Node *p_at, const Point2 *p_points, real_t p_min, real_t &r_closest_dist, Control **r_closest) {
