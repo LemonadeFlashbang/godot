@@ -2288,7 +2288,7 @@ Control *Control::_get_focus_neighbour(Margin p_margin, int p_count) {
 		Control *c = Object::cast_to<Control>(base);
 		if (c) {
 			if (c->data.RI || Object::cast_to<ScrollContainer>(c->get_parent())) {
-				_window_find_focus_neighbor(vdir, base, points, maxd, dist, &result);
+				_window_find_focus_neighbour(vdir, base, points, maxd, dist, &result);
 				if (result || c->data.RI) {
 					return result;
 				}
